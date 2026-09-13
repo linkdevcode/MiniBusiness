@@ -1,0 +1,63 @@
+## .NET build outputs
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+out/
+[Dd]ebug/
+[Rr]elease/
+*.dll
+*.exe
+*.pdb
+*.cache
+
+## NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Rider / JetBrains / Visual Studio
+.idea/
+*.sln.iml
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.DotSettings.user
+_ReSharper.Caches/
+riderModule.iml
+
+## OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+Desktop.ini
+
+## Test / coverage
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage*
+*.lcov
+
+## Logs & temp
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+
+## Secrets / local overrides
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+appsettings.*.local.json
+secrets.json
