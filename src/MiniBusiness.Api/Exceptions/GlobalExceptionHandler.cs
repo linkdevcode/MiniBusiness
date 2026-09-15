@@ -42,6 +42,12 @@ public sealed class GlobalExceptionHandler
                     "Conflict",
                     invalidOperationException.Message),
 
+            KeyNotFoundException notFoundException =>
+                CreateProblem(
+                    StatusCodes.Status404NotFound,
+                    "Not Found",
+                    notFoundException.Message),
+            
             _ =>
                 CreateProblem(
                     StatusCodes.Status500InternalServerError,

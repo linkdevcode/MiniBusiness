@@ -14,16 +14,53 @@ public class CustomerRepository : ICustomerRepository
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
     
-    public async Task AddAsync(Customer customer, CancellationToken cancellationToken)
+    public async Task AddAsync(
+        Customer customer,
+        CancellationToken cancellationToken)
     {
-        await _dbContext.Customers.AddAsync(customer, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.Customers.AddAsync(
+            customer,
+            cancellationToken);
+    }
+    
+    public async Task<Customer?> GetByIdForUpdateAsync(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.Customers
+            .FirstOrDefaultAsync(
+                x => x.Id == id,
+                cancellationToken);
     }
 
-    public async Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken)
+    public async Task<bool> ExistsByEmailAsync(
+        string email,
+        CancellationToken cancellationToken)
     {
         return await _dbContext.Customers
             .AsNoTracking()
-            .AnyAsync(x => x.Email == email, cancellationToken);
+            .AnyAsync(
+                x => x.Email == email,
+                cancellationToken);
+    }
+
+    public async Task<bool> ExistsByEmailExceptAsync(
+        string email,
+        Guid customerId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.Customers
+            .AsNoTracking()
+            .AnyAsync(
+                x => x.Email == email &&
+                     x.Id != customerId,
+                cancellationToken);
+    }
+
+    public async Task SaveChangesAsync(
+        CancellationToken cancellationToken)
+    {
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
     }
 }

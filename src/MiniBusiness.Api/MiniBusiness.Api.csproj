@@ -16,11 +16,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Extensions\" />
-      <Folder Include="Middleware\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\MiniBusiness.Application\MiniBusiness.Application.csproj" />
       <ProjectReference Include="..\MiniBusiness.Infrastructure\MiniBusiness.Infrastructure.csproj" />
     </ItemGroup>

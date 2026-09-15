@@ -1,4 +1,5 @@
 using MiniBusiness.Domain.Enums;
+using MiniBusiness.Domain.Exceptions;
 
 namespace MiniBusiness.Domain.Entities;
 
@@ -23,9 +24,13 @@ public class Customer : Entity
         Email = email;
     }
 
-    public void Deactive()
+    public void Deactivate()
     {
+        if (Status == CustomerStatus.Inactive)
+            throw new DomainException("Customer is already inactive.");
+
         Status = CustomerStatus.Inactive;
+
     }
     
     public void Active()

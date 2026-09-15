@@ -28,6 +28,8 @@ public sealed class CreateCustomerHandler
 
         await _customerRepository.AddAsync(customer, cancellationToken);
 
+        await _customerRepository.SaveChangesAsync(cancellationToken);
+
         return new CustomerDto(customer.Id, customer.Name, customer.Email, customer.Status.ToString());
     }
 }

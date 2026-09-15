@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MiniBusiness.Application.Common.Interfaces;
 using MiniBusiness.Infrastructure.Persistence;
+using MiniBusiness.Infrastructure.Queries;
 using MiniBusiness.Infrastructure.Repositories;
 
 namespace MiniBusiness.Infrastructure;
@@ -19,7 +20,8 @@ public static class DependencyInjection
         });
 
         services.AddScoped<ICustomerRepository, CustomerRepository>();
-
+        services.AddScoped<ICustomerQueries, CustomerQueries>();
+        
         return services;
     }
 }

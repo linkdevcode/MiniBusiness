@@ -7,11 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Orders\" />
-      <Folder Include="Products\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\MiniBusiness.Domain\MiniBusiness.Domain.csproj" />
     </ItemGroup>
 
