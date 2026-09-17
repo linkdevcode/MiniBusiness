@@ -61,3 +61,6 @@ coverage*
 *.key
 appsettings.*.local.json
 secrets.json
+
+## docs
+docs/

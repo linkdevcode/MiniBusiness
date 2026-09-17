@@ -1,6 +1,30 @@
 @MiniBusiness.Api_HostAddress = http://localhost:5113
 
-GET {{MiniBusiness.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Create customer
+POST {{MiniBusiness.Api_HostAddress}}/api/customers
+Content-Type: application/json
+
+{
+  "name": "Nguyen Van A",
+  "email": "a@example.com"
+}
+
+### Get by id
+GET {{MiniBusiness.Api_HostAddress}}/api/customers/{{customerId}}
+
+### List (paginated)
+GET {{MiniBusiness.Api_HostAddress}}/api/customers?page=1&pageSize=10
+
+### Update
+PUT {{MiniBusiness.Api_HostAddress}}/api/customers/{{customerId}}
+Content-Type: application/json
+
+{
+  "name": "Nguyen Van A Updated",
+  "email": "a.updated@example.com"
+}
+
+### Deactivate
+DELETE {{MiniBusiness.Api_HostAddress}}/api/customers/{{customerId}}
 
 ###
