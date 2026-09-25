@@ -8,7 +8,7 @@ namespace MiniBusiness.UnitTests.Domain;
 public class CustomerTests
 {
     [Fact]
-    public void Constructor_WhenCreated_StatusIsActive()
+    public void OK_Constructor_WhenCreated_StatusIsActive()
     {
         // Arrange
         const string name = "Nguyen Van A";
@@ -25,7 +25,7 @@ public class CustomerTests
     }
     
     [Fact]
-    public void Deactivate_WhenActive_SetsStatusToInactive()
+    public void OK_Deactivate_WhenActive_SetsStatusToInactive()
     {
         // Arrange
         var customer = new Customer("Nguyen Van A", "a@example.com");
@@ -36,24 +36,9 @@ public class CustomerTests
         // Assert
         customer.Status.Should().Be(CustomerStatus.Inactive);
     }
-    
-    [Fact]
-    public void Deactivate_WhenAlreadyInactive_ThrowsDomainException()
-    {
-        // Arrange
-        var customer = new Customer("Nguyen Van A", "a@example.com");
-        customer.Deactivate();
-        
-        // Act
-        var action = () => customer.Deactivate();
-
-        // Assert
-        action.Should().Throw<DomainException>()
-            .WithMessage("Customer is already inactive.");
-    }
 
     [Fact]
-    public void Update_WhenCalled_ChangesNameAndEmail()
+    public void OK_Update_WhenCalled_ChangesNameAndEmail()
     {
         // Arrange
         var customer = new Customer("Old Name", "old@example.com");
@@ -67,5 +52,20 @@ public class CustomerTests
         customer.Name.Should().Be(newName);
         customer.Email.Should().Be(newEmail);
         customer.Status.Should().Be(CustomerStatus.Active);
+    }
+    
+    [Fact]
+    public void NG_Deactivate_WhenAlreadyInactive_ThrowsDomainException()
+    {
+        // Arrange
+        var customer = new Customer("Nguyen Van A", "a@example.com");
+        customer.Deactivate();
+        
+        // Act
+        var action = () => customer.Deactivate();
+
+        // Assert
+        action.Should().Throw<DomainException>()
+            .WithMessage("Customer is already inactive.");
     }
 }

@@ -30,3 +30,5 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
+
+public abstract partial class Program {}
