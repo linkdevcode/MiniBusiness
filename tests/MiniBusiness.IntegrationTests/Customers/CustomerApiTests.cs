@@ -220,4 +220,29 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         // Assert
         deactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+    
+    [Fact]
+    public async Task NG_Create_WhenParallelDuplicateEmail_OneCreatedOneConflict()
+    {
+        // Arrange
+        var email = $"race-{Guid.NewGuid():N}@example.com";
+        var payload = new { name = "Race User", email };
+
+        // Act
+        var task1 = _client.PostAsJsonAsync("/api/customers", payload);
+        var task2 = _client.PostAsJsonAsync("/api/customers", payload);
+        var responses = await Task.WhenAll(task1, task2);
+
+        var statuses = responses
+            .Select(r => r.StatusCode)
+            .OrderBy(s => s)
+            .ToArray();
+
+        // Assert
+        statuses.Should().Equal(
+            HttpStatusCode.Created,      // 201
+            HttpStatusCode.Conflict);    // 409
+
+        responses.Should().NotContain(r => r.StatusCode == HttpStatusCode.InternalServerError);
+    }
 }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MiniBusiness.Application.Common.Interfaces;
 using MiniBusiness.Domain.Entities;
+using MiniBusiness.Infrastructure.Extensions;
 using MiniBusiness.Infrastructure.Persistence;
 
 namespace MiniBusiness.Infrastructure.Repositories;
@@ -57,10 +58,15 @@ public class CustomerRepository : ICustomerRepository
                 cancellationToken);
     }
 
-    public async Task SaveChangesAsync(
-        CancellationToken cancellationToken)
+    public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
-        await _dbContext.SaveChangesAsync(
-            cancellationToken);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex.IsUniqueViolation())
+        {
+            throw new InvalidOperationException("A customer with this email already exists.", ex);
+        }
     }
 }
