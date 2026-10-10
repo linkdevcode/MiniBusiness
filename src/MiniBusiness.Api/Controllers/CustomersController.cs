@@ -4,6 +4,7 @@ using MiniBusiness.Api.Requests;
 using MiniBusiness.Application.Common;
 using MiniBusiness.Application.Customers.Commands.CreateCustomer;
 using MiniBusiness.Application.Customers.Commands.DeactivateCustomer;
+using MiniBusiness.Application.Customers.Commands.ReactivateCustomer;
 using MiniBusiness.Application.Customers.Commands.UpdateCustomer;
 using MiniBusiness.Application.Customers.DTOs;
 using MiniBusiness.Application.Customers.Queries.GetCustomerById;
@@ -93,14 +94,18 @@ public class CustomersController : ControllerBase
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Deactivate(
-        Guid id,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken)
     {
-        await _sender.Send(
-            new DeactivateCustomerCommand(id),
-            cancellationToken);
+        await _sender.Send(new DeactivateCustomerCommand(id), cancellationToken);
+        return NoContent();
+    }
 
+    [HttpPost("{id:guid}/reactivate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Reactivate(Guid id, CancellationToken cancellationToken)
+    {
+        await _sender.Send(new ReactivateCustomerCommand(id), cancellationToken);
         return NoContent();
     }
 }

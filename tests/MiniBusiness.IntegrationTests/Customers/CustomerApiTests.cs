@@ -47,6 +47,9 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         created.Should().NotBeNull();
         created!.Email.Should().Be(email);
         created.Name.Should().Be(name);
+        created.CreatedAt.Should().NotBe(default);
+        created.UpdatedAt.Should().NotBe(default);
+        (created.UpdatedAt - created.CreatedAt).Duration().Should().BeLessThan(TimeSpan.FromSeconds(1));
 
         // Act — GetById
         var getResponse = await _client.GetAsync($"/api/customers/{created.Id}");
@@ -59,6 +62,8 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
 
         fetched.Should().NotBeNull();
         fetched!.Id.Should().Be(created.Id);
+        fetched.CreatedAt.Should().Be(created.CreatedAt);
+        fetched.UpdatedAt.Should().Be(created.UpdatedAt);
         fetched.Email.Should().Be(email);
         fetched.Name.Should().Be(name);
     }
@@ -142,34 +147,59 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
     {
         // Arrange
         var beforeEmail = $"user-{Guid.NewGuid():N}@example.com";
-        var beforeName = $"Nguyen Van A";
-        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", new
+        var beforeName = "Nguyen Van A";
+        
+        var createResponse = await _client.PostAsJsonAsync("/api/customers", new
         {
             name = beforeName,
             email = beforeEmail,
         });
-        var creatingCustomer = await createCustomerResponse.Content
-            .ReadFromJsonAsync<CustomerDto>(JsonOptions);
         
-        // Act
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createdCustomer = await createResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
+        createdCustomer.Should().NotBeNull();
+        
+        // Assert Create Timestamps
+        createdCustomer!.CreatedAt.Should().NotBe(default);
+        createdCustomer.UpdatedAt.Should().NotBe(default);
+        (createdCustomer.UpdatedAt - createdCustomer.CreatedAt).Duration().Should().BeLessThan(TimeSpan.FromSeconds(1));
+        
+        // Act - Update
         var afterEmail = $"user-{Guid.NewGuid():N}@example.com";
-        var afterName = $"Nguyen Van B";
-        var updateCustomerResponse = await _client.PutAsJsonAsync($"/api/customers/{creatingCustomer?.Id}", new
+        var afterName = "Nguyen Van B";
+        
+        // Thêm delay nhỏ để đảm bảo thời gian hệ thống kịp nhảy mốc mới (nếu chạy quá nhanh)
+        await Task.Delay(10);
+
+        var updateResponse = await _client.PutAsJsonAsync($"/api/customers/{createdCustomer.Id}", new
         {
             name = afterName,
             email = afterEmail,
         });
-        var updatingCustomer = await updateCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
         
-        // Assert
-        createCustomerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        creatingCustomer?.Name.Should().Be(beforeName);
-        creatingCustomer?.Email.Should().Be(beforeEmail);
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updatedCustomer = await updateResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
+        updatedCustomer.Should().NotBeNull();
         
-        updateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        updatingCustomer?.Id.Should().Be(creatingCustomer!.Id);
-        updatingCustomer?.Name.Should().Be(afterName);
-        updatingCustomer?.Email.Should().Be(afterEmail);
+        // Assert Update Response
+        updatedCustomer!.Id.Should().Be(createdCustomer.Id);
+        updatedCustomer.Name.Should().Be(afterName);
+        updatedCustomer.Email.Should().Be(afterEmail);
+        updatedCustomer.CreatedAt.Should().Be(createdCustomer.CreatedAt); // CreatedAt phải giữ nguyên
+        updatedCustomer.UpdatedAt.Should().BeAfter(createdCustomer.UpdatedAt); // UpdatedAt phải mới hơn
+
+        // Act & Assert - GetById (Đúng theo tên test case)
+        var getResponse = await _client.GetAsync($"/api/customers/{createdCustomer.Id}");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        
+        var fetchedCustomer = await getResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
+        fetchedCustomer.Should().NotBeNull();
+        
+        fetchedCustomer!.Id.Should().Be(createdCustomer.Id);
+        fetchedCustomer.Name.Should().Be(afterName);
+        fetchedCustomer.Email.Should().Be(afterEmail);
+        fetchedCustomer.CreatedAt.Should().Be(createdCustomer.CreatedAt);
+        fetchedCustomer.UpdatedAt.Should().Be(updatedCustomer.UpdatedAt);
     }
 
     [Fact]
@@ -219,6 +249,83 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         
         // Assert
         deactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+    
+    [Fact]
+    public async Task NG_Deactivate_WhenAlreadyInactive_Returns400()
+    {
+        // Arrange
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+        var name = $"Nguyen Van A";
+        var payload = new { name, email };
+        
+        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var creatingCustomer = await createCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
+        var deactivateCustomerResponseFirst = await _client.DeleteAsync($"/api/customers/{creatingCustomer?.Id}");
+        
+        // Act
+        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/customers/{creatingCustomer?.Id}");
+        
+        // Assert
+        createCustomerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        creatingCustomer?.Status.Should().Be(nameof(CustomerStatus.Active));
+        deactivateCustomerResponseFirst.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        deactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+    
+    [Fact]
+    public async Task OK_Reactivate_Returns204()
+    {
+        // Arrange
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+        var name = $"Nguyen Van A";
+        var payload = new { name, email };
+        
+        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var creatingCustomer = await createCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
+        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/customers/{creatingCustomer?.Id}");
+        
+        // Act
+        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/customers/{creatingCustomer?.Id}/reactivate", new{});
+        var getCustomerResponse = await _client.GetAsync($"/api/customers/{creatingCustomer?.Id}");
+        var gettingCustomer = await getCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
+        
+        // Assert
+        createCustomerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        deactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        reactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        getCustomerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        gettingCustomer?.Status.Should().Be(nameof(CustomerStatus.Active));
+    }
+
+    [Fact]
+    public async Task NG_Reactivate_WhenMissing_Returns404()
+    {
+        // Act
+        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/customers/{Guid.NewGuid():N}/reactivate", new{});
+        
+        // Assert
+        reactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task NG_Reactivate_WhenAlreadyActive_Returns400()
+    {
+        // Arrange
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+        var name = $"Nguyen Van A";
+        var payload = new { name, email };
+        
+        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var creatingCustomer = await createCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
+        
+        // Act
+        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/customers/{creatingCustomer?.Id}/reactivate", new{});
+        
+        // Assert
+        createCustomerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        creatingCustomer?.Status.Should().Be(nameof(CustomerStatus.Active));
+        reactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
     
     [Fact]

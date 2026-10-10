@@ -14,11 +14,8 @@ public sealed class DeactivateCustomerHandler : IRequestHandler<DeactivateCustom
 
     public async Task Handle(DeactivateCustomerCommand request, CancellationToken cancellationToken)
     {
-        var customer = await _customerRepository.GetByIdForUpdateAsync(
-                request.Id, cancellationToken);
-
-        if (customer is null)
-            throw new KeyNotFoundException("Customer was not found.");
+        var customer = await _customerRepository.GetByIdForUpdateAsync(request.Id, cancellationToken)
+            ?? throw new KeyNotFoundException("Customer was not found.");
 
         customer.Deactivate();
 

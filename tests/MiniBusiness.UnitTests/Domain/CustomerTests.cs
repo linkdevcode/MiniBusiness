@@ -39,6 +39,20 @@ public class CustomerTests
     }
 
     [Fact]
+    public void OK_Reactivate_WhenDeactivate_SetsStatusToActive()
+    {
+        // Arrange
+        var customer = new Customer("Nguyen Van A", Email.Create("a@example.com"));
+        customer.Deactivate();
+        
+        // Act
+        customer.Reactivate();
+
+        // Assert
+        customer.Status.Should().Be(CustomerStatus.Active);
+    }
+
+    [Fact]
     public void OK_Update_WhenCalled_ChangesNameAndEmail()
     {
         // Arrange
@@ -68,5 +82,19 @@ public class CustomerTests
         // Assert
         action.Should().Throw<DomainException>()
             .WithMessage("Customer is already inactive.");
+    }
+    
+    [Fact]
+    public void NG_Reactivate_WhenAlreadyActive_ThrowsDomainException()
+    {
+        // Arrange
+        var customer = new Customer("Nguyen Van A", Email.Create("a@example.com"));
+        
+        // Act
+        var action = () => customer.Reactivate();
+
+        // Assert
+        action.Should().Throw<DomainException>()
+            .WithMessage("Customer is already active.");
     }
 }

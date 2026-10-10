@@ -28,14 +28,20 @@ public class Customer : Entity
     public void Deactivate()
     {
         if (Status == CustomerStatus.Inactive)
+        {
             throw new DomainException("Customer is already inactive.");
-
+        }
+        
         Status = CustomerStatus.Inactive;
 
     }
     
-    public void Active()
+    public void Reactivate()
     {
+        if (Status == CustomerStatus.Active)
+        {
+            throw new DomainException("Customer is already active.");
+        }
         Status = CustomerStatus.Active;
     }
 }

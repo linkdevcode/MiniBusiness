@@ -37,6 +37,8 @@ public sealed class UpdateCustomerHandler : IRequestHandler<UpdateCustomerComman
             customer.Id,
             customer.Name,
             customer.Email.Value,
-            customer.Status.ToString());
+            customer.Status.ToString(),
+            customer.CreatedAt,
+            customer.UpdatedAt);
     }
 }

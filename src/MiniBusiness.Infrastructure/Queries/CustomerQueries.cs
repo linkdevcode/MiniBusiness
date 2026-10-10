@@ -26,7 +26,9 @@ public sealed class CustomerQueries : ICustomerQueries
                 x.Id,
                 x.Name,
                 x.Email,
-                x.Status.ToString()))
+                x.Status.ToString(),
+                x.CreatedAt,
+                x.UpdatedAt))
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -49,7 +51,9 @@ public sealed class CustomerQueries : ICustomerQueries
                 x.Id,
                 x.Name,
                 x.Email,
-                x.Status.ToString()))
+                x.Status.ToString(),
+                x.CreatedAt,
+                x.UpdatedAt))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<CustomerDto>(

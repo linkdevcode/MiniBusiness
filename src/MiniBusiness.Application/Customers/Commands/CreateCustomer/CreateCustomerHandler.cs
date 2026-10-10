@@ -31,6 +31,12 @@ public sealed class CreateCustomerHandler
 
         await _customerRepository.SaveChangesAsync(cancellationToken);
 
-        return new CustomerDto(customer.Id, customer.Name, customer.Email.Value, customer.Status.ToString());
+        return new CustomerDto(
+            customer.Id, 
+            customer.Name, 
+            customer.Email.Value, 
+            customer.Status.ToString(),
+            customer.CreatedAt,
+            customer.UpdatedAt);
     }
 }

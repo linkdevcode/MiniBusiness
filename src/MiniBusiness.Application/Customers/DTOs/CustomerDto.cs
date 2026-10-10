@@ -4,5 +4,7 @@ public sealed record CustomerDto(
     Guid Id,
     string Name,
     string Email,
-    string Status
+    string Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt
     );
