@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MiniBusiness.Domain.Entities;
+using MiniBusiness.Domain.ValueObjects;
 
 namespace MiniBusiness.Infrastructure.Persistence.Configurations;
 
@@ -23,6 +24,9 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             .HasMaxLength(200);
 
         builder.Property(x => x.Email)
+            .HasConversion(
+                email => email.Value,
+                value => Email.Create(value))
             .IsRequired()
             .HasMaxLength(320);
         

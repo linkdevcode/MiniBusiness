@@ -4,6 +4,7 @@ using MiniBusiness.Application.Customers.Commands.DeactivateCustomer;
 using MiniBusiness.Application.Customers.Commands.UpdateCustomer;
 using MiniBusiness.Domain.Entities;
 using MiniBusiness.Domain.Enums;
+using MiniBusiness.Domain.ValueObjects;
 using MiniBusiness.UnitTests.Fakes;
 
 namespace MiniBusiness.UnitTests.Application;
@@ -58,7 +59,7 @@ public class CustomerHandlerTests
     public async Task OK_Update()
     {
         // Arrange
-        var customer = new Customer("Nguyen Van A", "a@example.com");
+        var customer = new Customer("Nguyen Van A", Email.Create("a@example.com"));
         var repository = new FakeCustomerRepository()
         {
             CustomerById = customer,
@@ -101,7 +102,7 @@ public class CustomerHandlerTests
     public async Task NG_Update_WhenEmailExceptExists_ThrowsInvalidOperationException()
     {
         // Arrange
-        var customer = new Customer("Nguyen Van A", "a@example.com");
+        var customer = new Customer("Nguyen Van A", Email.Create("a@example.com"));
         var repository = new FakeCustomerRepository()
         {
             CustomerById = customer,
@@ -123,7 +124,7 @@ public class CustomerHandlerTests
     public async Task OK_Deactivate()
     {
         // Arrange
-        var customer = new Customer("Nguyen Van A", "a@example.com");
+        var customer = new Customer("Nguyen Van A", Email.Create("a@example.com"));
         var repository = new FakeCustomerRepository()
         {
             CustomerById = customer

@@ -2,6 +2,7 @@ using MediatR;
 using MiniBusiness.Application.Common.Interfaces;
 using MiniBusiness.Application.Customers.DTOs;
 using MiniBusiness.Domain.Entities;
+using MiniBusiness.Domain.ValueObjects;
 
 namespace MiniBusiness.Application.Customers.Commands.CreateCustomer;
 
@@ -24,12 +25,12 @@ public sealed class CreateCustomerHandler
             throw new InvalidOperationException("A customer with this email already exists.");
         }
 
-        var customer = new Customer(request.Name, request.Email);
+        var customer = new Customer(request.Name, Email.Create(request.Email));
 
         await _customerRepository.AddAsync(customer, cancellationToken);
 
         await _customerRepository.SaveChangesAsync(cancellationToken);
 
-        return new CustomerDto(customer.Id, customer.Name, customer.Email, customer.Status.ToString());
+        return new CustomerDto(customer.Id, customer.Name, customer.Email.Value, customer.Status.ToString());
     }
 }

@@ -1,24 +1,25 @@
 using MiniBusiness.Domain.Enums;
 using MiniBusiness.Domain.Exceptions;
+using MiniBusiness.Domain.ValueObjects;
 
 namespace MiniBusiness.Domain.Entities;
 
 public class Customer : Entity
 {
     public string Name { get; private set; } = string.Empty;
-    public string Email { get; private set; } = string.Empty;
+    public Email Email { get; private set; }
     public CustomerStatus Status { get; private set; }
     
     private Customer(){}
 
-    public Customer(string name, string email)
+    public Customer(string name, Email email)
     {
         Name = name;
         Email = email;
         Status = CustomerStatus.Active;
     }
 
-    public void Update(string name, string email)
+    public void Update(string name, Email email)
     {
         Name = name;
         Email = email;

@@ -1,6 +1,7 @@
 using MediatR;
 using MiniBusiness.Application.Common.Interfaces;
 using MiniBusiness.Application.Customers.DTOs;
+using MiniBusiness.Domain.ValueObjects;
 
 namespace MiniBusiness.Application.Customers.Commands.UpdateCustomer;
 
@@ -21,20 +22,21 @@ public sealed class UpdateCustomerHandler : IRequestHandler<UpdateCustomerComman
         if (customer is null)
             throw new KeyNotFoundException("Customer was not found.");
 
+        var email = Email.Create(request.Email);
         var emailExists = await _customerRepository.ExistsByEmailExceptAsync(
-                request.Email, request.Id, cancellationToken);
+            email.Value, request.Id, cancellationToken);
 
         if (emailExists)
             throw new InvalidOperationException("A customer with this email already exists.");
 
-        customer.Update(request.Name, request.Email);
+        customer.Update(request.Name, email);
 
         await _customerRepository.SaveChangesAsync(cancellationToken);
 
         return new CustomerDto(
             customer.Id,
             customer.Name,
-            customer.Email,
+            customer.Email.Value,
             customer.Status.ToString());
     }
 }

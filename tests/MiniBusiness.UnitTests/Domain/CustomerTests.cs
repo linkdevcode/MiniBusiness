@@ -2,6 +2,7 @@ using FluentAssertions;
 using MiniBusiness.Domain.Entities;
 using MiniBusiness.Domain.Enums;
 using MiniBusiness.Domain.Exceptions;
+using MiniBusiness.Domain.ValueObjects;
 
 namespace MiniBusiness.UnitTests.Domain;
 
@@ -11,8 +12,8 @@ public class CustomerTests
     public void OK_Constructor_WhenCreated_StatusIsActive()
     {
         // Arrange
-        const string name = "Nguyen Van A";
-        const string email = "a@example.com";
+        var name = "Nguyen Van A";
+        var email = Email.Create("a@example.com");
 
         // Act
         var customer = new Customer(name, email);
@@ -28,7 +29,7 @@ public class CustomerTests
     public void OK_Deactivate_WhenActive_SetsStatusToInactive()
     {
         // Arrange
-        var customer = new Customer("Nguyen Van A", "a@example.com");
+        var customer = new Customer("Nguyen Van A", Email.Create("a@example.com"));
 
         // Act
         customer.Deactivate();
@@ -41,9 +42,9 @@ public class CustomerTests
     public void OK_Update_WhenCalled_ChangesNameAndEmail()
     {
         // Arrange
-        var customer = new Customer("Old Name", "old@example.com");
-        const string newName = "New Name";
-        const string newEmail = "new@example.com";
+        var customer = new Customer("Old Name", Email.Create("old@example.com"));
+        var newName = "New Name";
+        var newEmail = Email.Create("new@example.com");
 
         // Act
         customer.Update(newName, newEmail);
@@ -58,7 +59,7 @@ public class CustomerTests
     public void NG_Deactivate_WhenAlreadyInactive_ThrowsDomainException()
     {
         // Arrange
-        var customer = new Customer("Nguyen Van A", "a@example.com");
+        var customer = new Customer("Nguyen Van A", Email.Create("a@example.com"));
         customer.Deactivate();
         
         // Act
