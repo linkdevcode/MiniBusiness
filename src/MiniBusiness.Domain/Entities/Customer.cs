@@ -1,4 +1,5 @@
 using MiniBusiness.Domain.Enums;
+using MiniBusiness.Domain.Events;
 using MiniBusiness.Domain.Exceptions;
 using MiniBusiness.Domain.ValueObjects;
 
@@ -17,12 +18,16 @@ public class Customer : Entity
         Name = name;
         Email = email;
         Status = CustomerStatus.Active;
+        
+        AddDomainEvent(new CustomerCreatedEvent(Id, Email.Value));
     }
 
     public void Update(string name, Email email)
     {
         Name = name;
         Email = email;
+        
+        AddDomainEvent(new CustomerUpdatedEvent(Id));
     }
 
     public void Deactivate()
@@ -31,9 +36,9 @@ public class Customer : Entity
         {
             throw new DomainException("Customer is already inactive.");
         }
-        
         Status = CustomerStatus.Inactive;
-
+        
+        AddDomainEvent(new CustomerDeactivatedEvent(Id));
     }
     
     public void Reactivate()
@@ -43,5 +48,7 @@ public class Customer : Entity
             throw new DomainException("Customer is already active.");
         }
         Status = CustomerStatus.Active;
+        
+        AddDomainEvent(new CustomerReactivatedEvent(Id));
     }
 }

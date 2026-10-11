@@ -1,6 +1,7 @@
 using FluentAssertions;
 using MiniBusiness.Domain.Entities;
 using MiniBusiness.Domain.Enums;
+using MiniBusiness.Domain.Events;
 using MiniBusiness.Domain.Exceptions;
 using MiniBusiness.Domain.ValueObjects;
 
@@ -23,6 +24,7 @@ public class CustomerTests
         customer.Name.Should().Be(name);
         customer.Email.Should().Be(email);
         customer.Status.Should().Be(CustomerStatus.Active);
+        customer.DomainEvents.Should().ContainSingle(e => e is CustomerCreatedEvent);
     }
     
     [Fact]
@@ -36,6 +38,9 @@ public class CustomerTests
 
         // Assert
         customer.Status.Should().Be(CustomerStatus.Inactive);
+        customer.DomainEvents.Should().Satisfy(
+            e => e is CustomerCreatedEvent,
+            e => e is CustomerDeactivatedEvent);
     }
 
     [Fact]
@@ -44,12 +49,16 @@ public class CustomerTests
         // Arrange
         var customer = new Customer("Nguyen Van A", Email.Create("a@example.com"));
         customer.Deactivate();
-        
+
         // Act
         customer.Reactivate();
 
         // Assert
         customer.Status.Should().Be(CustomerStatus.Active);
+        customer.DomainEvents.Should().Satisfy(
+            e => e is CustomerCreatedEvent,
+            e => e is CustomerDeactivatedEvent,
+            e => e is CustomerReactivatedEvent);
     }
 
     [Fact]
@@ -67,6 +76,9 @@ public class CustomerTests
         customer.Name.Should().Be(newName);
         customer.Email.Should().Be(newEmail);
         customer.Status.Should().Be(CustomerStatus.Active);
+        customer.DomainEvents.Should().Satisfy(
+            e => e is CustomerCreatedEvent,
+            e => e is CustomerUpdatedEvent);
     }
     
     [Fact]
@@ -96,5 +108,6 @@ public class CustomerTests
         // Assert
         action.Should().Throw<DomainException>()
             .WithMessage("Customer is already active.");
+        customer.DomainEvents.Should().NotContain(e => e is CustomerReactivatedEvent);
     }
 }

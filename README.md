@@ -13,6 +13,7 @@ Toàn bộ vision, roadmap, TODO và mentor guide nằm trong **[`docs/`](./docs
 | Task hôm nay | [`docs/TODO.md`](./docs/TODO.md) |
 | Mentor Level 0 | [`docs/mentor/level-0/`](./docs/mentor/level-0/README.md) |
 | Mentor Level 1 | [`docs/mentor/level-1/`](./docs/mentor/level-1/README.md) |
+| Mentor Level 2 | [`docs/mentor/level-2/`](./docs/mentor/level-2/README.md) |
 
 ## Chạy nhanh
 
@@ -26,4 +27,4 @@ dotnet ef database update \
 dotnet run --project src/MiniBusiness.Api
 ```
 
-Level hiện tại: **1** — Domain / Value Objects (Customer đã ổn định).
+Level hiện tại: **2** — API gần production (Customer + Domain ổn định).
