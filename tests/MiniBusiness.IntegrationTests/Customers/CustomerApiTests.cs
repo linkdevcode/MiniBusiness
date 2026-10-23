@@ -36,7 +36,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var payload = new { name, email };
 
         // Act — Create
-        var createResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/customers", payload);
 
         // Assert — Create
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -52,7 +52,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         (created.UpdatedAt - created.CreatedAt).Duration().Should().BeLessThan(TimeSpan.FromSeconds(1));
 
         // Act — GetById
-        var getResponse = await _client.GetAsync($"/api/customers/{created.Id}");
+        var getResponse = await _client.GetAsync($"/api/v1/customers/{created.Id}");
 
         // Assert — GetById
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -75,11 +75,11 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var email = $"dup-{Guid.NewGuid():N}@example.com";
         var payload = new { name = "First", email };
 
-        var first = await _client.PostAsJsonAsync("/api/customers", payload);
+        var first = await _client.PostAsJsonAsync("/api/v1/customers", payload);
         first.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Act — POST lần 2 cùng email
-        var second = await _client.PostAsJsonAsync("/api/customers", payload);
+        var second = await _client.PostAsJsonAsync("/api/v1/customers", payload);
         
         // Assert
         second.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -94,11 +94,11 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
             var email = $"user-{Guid.NewGuid():N}@example.com";
             var name = $"Nguyen Van {i}";
             var payload = new { name, email };
-            await _client.PostAsJsonAsync("/api/customers", payload);
+            await _client.PostAsJsonAsync("/api/v1/customers", payload);
         }
 
         // Act
-        var getResponse = await _client.GetAsync("/api/customers?page=1&pageSize=2");
+        var getResponse = await _client.GetAsync("/api/v1/customers?page=1&pageSize=2");
         var customersResult = await getResponse.Content.ReadFromJsonAsync<PagedResult<CustomerDto>>(JsonOptions);
 
         // Assert
@@ -107,6 +107,17 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         customersResult?.Page.Should().Be(1);
         customersResult?.PageSize.Should().Be(2);
         customersResult?.TotalCount.Should().Be(3);
+        customersResult?.TotalPages.Should().Be(2);
+    }
+    
+    [Fact]
+    public async Task NG_GetAll_WithLargePageSize()
+    {
+        // Act
+        var getResponse = await _client.GetAsync("/api/v1/customers?page=1&pageSize=9999");
+        
+        // Assert
+        getResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -116,12 +127,12 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var email = $"user-{Guid.NewGuid():N}@example.com";
         var name = $"Nguyen Van A";
         var payload = new { name, email };
-        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var createCustomerResponse = await _client.PostAsJsonAsync("/api/v1/customers", payload);
         var creatingCustomer = await createCustomerResponse.Content
             .ReadFromJsonAsync<CustomerDto>(JsonOptions);
         
         // Act
-        var getCustomerResponse = await _client.GetAsync($"/api/customers/{creatingCustomer?.Id}");
+        var getCustomerResponse = await _client.GetAsync($"/api/v1/customers/{creatingCustomer?.Id}");
         var gettingCustomer = await getCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
         
         // Assert
@@ -136,7 +147,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
     public async Task NG_GetById_WhenMissing_Returns404()
     {
         // Act
-        var getCustomerResponse = await _client.GetAsync($"/api/customers/{Guid.NewGuid():N}");
+        var getCustomerResponse = await _client.GetAsync($"/api/v1/customers/{Guid.NewGuid():N}");
         
         // Assert
         getCustomerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -149,7 +160,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var beforeEmail = $"user-{Guid.NewGuid():N}@example.com";
         var beforeName = "Nguyen Van A";
         
-        var createResponse = await _client.PostAsJsonAsync("/api/customers", new
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/customers", new
         {
             name = beforeName,
             email = beforeEmail,
@@ -171,7 +182,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         // Thêm delay nhỏ để đảm bảo thời gian hệ thống kịp nhảy mốc mới (nếu chạy quá nhanh)
         await Task.Delay(10);
 
-        var updateResponse = await _client.PutAsJsonAsync($"/api/customers/{createdCustomer.Id}", new
+        var updateResponse = await _client.PutAsJsonAsync($"/api/v1/customers/{createdCustomer.Id}", new
         {
             name = afterName,
             email = afterEmail,
@@ -189,7 +200,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         updatedCustomer.UpdatedAt.Should().BeAfter(createdCustomer.UpdatedAt); // UpdatedAt phải mới hơn
 
         // Act & Assert - GetById (Đúng theo tên test case)
-        var getResponse = await _client.GetAsync($"/api/customers/{createdCustomer.Id}");
+        var getResponse = await _client.GetAsync($"/api/v1/customers/{createdCustomer.Id}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         
         var fetchedCustomer = await getResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
@@ -206,7 +217,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
     public async Task NG_Update_WhenMissing_Returns404()
     {
         // Act
-        var updateCustomerResponse = await _client.PutAsJsonAsync($"/api/customers/{Guid.NewGuid():N}", new
+        var updateCustomerResponse = await _client.PutAsJsonAsync($"/api/v1/customers/{Guid.NewGuid():N}", new
         {
             name = "Nguyen Van A",
             email = "userA@example.com",
@@ -223,13 +234,13 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var email = $"user-{Guid.NewGuid():N}@example.com";
         var name = $"Nguyen Van A";
         var payload = new { name, email };
-        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var createCustomerResponse = await _client.PostAsJsonAsync("/api/v1/customers", payload);
         var creatingCustomer = await createCustomerResponse.Content
             .ReadFromJsonAsync<CustomerDto>(JsonOptions);
         
         // Act
-        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/customers/{creatingCustomer?.Id}");
-        var getCustomerResponse = await _client.GetAsync($"/api/customers/{creatingCustomer?.Id}");
+        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/v1/customers/{creatingCustomer?.Id}");
+        var getCustomerResponse = await _client.GetAsync($"/api/v1/customers/{creatingCustomer?.Id}");
         var gettingCustomer = await getCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
         
         // Assert
@@ -245,7 +256,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
     public async Task NG_Deactivate_WhenMissing_Returns404()
     {
         // Act
-        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/customers/{Guid.NewGuid():N}");
+        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/v1/customers/{Guid.NewGuid():N}");
         
         // Assert
         deactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -259,12 +270,12 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var name = $"Nguyen Van A";
         var payload = new { name, email };
         
-        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var createCustomerResponse = await _client.PostAsJsonAsync("/api/v1/customers", payload);
         var creatingCustomer = await createCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
-        var deactivateCustomerResponseFirst = await _client.DeleteAsync($"/api/customers/{creatingCustomer?.Id}");
+        var deactivateCustomerResponseFirst = await _client.DeleteAsync($"/api/v1/customers/{creatingCustomer?.Id}");
         
         // Act
-        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/customers/{creatingCustomer?.Id}");
+        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/v1/customers/{creatingCustomer?.Id}");
         
         // Assert
         createCustomerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -281,13 +292,13 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var name = $"Nguyen Van A";
         var payload = new { name, email };
         
-        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var createCustomerResponse = await _client.PostAsJsonAsync("/api/v1/customers", payload);
         var creatingCustomer = await createCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
-        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/customers/{creatingCustomer?.Id}");
+        var deactivateCustomerResponse = await _client.DeleteAsync($"/api/v1/customers/{creatingCustomer?.Id}");
         
         // Act
-        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/customers/{creatingCustomer?.Id}/reactivate", new{});
-        var getCustomerResponse = await _client.GetAsync($"/api/customers/{creatingCustomer?.Id}");
+        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/v1/customers/{creatingCustomer?.Id}/reactivate", new{});
+        var getCustomerResponse = await _client.GetAsync($"/api/v1/customers/{creatingCustomer?.Id}");
         var gettingCustomer = await getCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
         
         // Assert
@@ -302,7 +313,7 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
     public async Task NG_Reactivate_WhenMissing_Returns404()
     {
         // Act
-        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/customers/{Guid.NewGuid():N}/reactivate", new{});
+        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/v1/customers/{Guid.NewGuid():N}/reactivate", new{});
         
         // Assert
         reactivateCustomerResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -316,11 +327,11 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var name = $"Nguyen Van A";
         var payload = new { name, email };
         
-        var createCustomerResponse = await _client.PostAsJsonAsync("/api/customers", payload);
+        var createCustomerResponse = await _client.PostAsJsonAsync("/api/v1/customers", payload);
         var creatingCustomer = await createCustomerResponse.Content.ReadFromJsonAsync<CustomerDto>(JsonOptions);
         
         // Act
-        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/customers/{creatingCustomer?.Id}/reactivate", new{});
+        var reactivateCustomerResponse = await _client.PostAsJsonAsync($"/api/v1/customers/{creatingCustomer?.Id}/reactivate", new{});
         
         // Assert
         createCustomerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -336,8 +347,8 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         var payload = new { name = "Race User", email };
 
         // Act
-        var task1 = _client.PostAsJsonAsync("/api/customers", payload);
-        var task2 = _client.PostAsJsonAsync("/api/customers", payload);
+        var task1 = _client.PostAsJsonAsync("/api/v1/customers", payload);
+        var task2 = _client.PostAsJsonAsync("/api/v1/customers", payload);
         var responses = await Task.WhenAll(task1, task2);
 
         var statuses = responses

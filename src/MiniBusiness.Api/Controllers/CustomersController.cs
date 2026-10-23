@@ -1,5 +1,7 @@
+using Asp.Versioning;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MiniBusiness.Api.Requests;
 using MiniBusiness.Application.Common;
 using MiniBusiness.Application.Customers.Commands.CreateCustomer;
@@ -12,20 +14,35 @@ using MiniBusiness.Application.Customers.Queries.GetCustomers;
 
 namespace MiniBusiness.Api.Controllers;
 
+/// <summary>
+/// Customer management endpoints (API v1).
+/// </summary>
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/customers")]
+[Tags("Customers")]
 public class CustomersController : ControllerBase
 {
     private readonly ISender _sender;
 
     public CustomersController(ISender sender)
     {
-        _sender = sender ??  throw new ArgumentNullException(nameof(sender));
+        _sender = sender ?? throw new ArgumentNullException(nameof(sender));
     }
 
+    /// <summary>
+    /// Creates a new customer.
+    /// </summary>
+    /// <param name="command">Customer name and email.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The created customer, with Location header pointing to GetById.</returns>
+    /// <response code="201">Customer created successfully.</response>
+    /// <response code="400">Validation failed (invalid name/email).</response>
+    /// <response code="409">Email already exists.</response>
     [HttpPost]
     [ProducesResponseType(typeof(CustomerDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<CustomerDto>> Create(
         [FromBody] CreateCustomerCommand command,
         CancellationToken cancellationToken)
@@ -33,13 +50,23 @@ public class CustomersController : ControllerBase
         var customer = await _sender.Send(
             command,
             cancellationToken);
-
+        
+        var apiVersion = HttpContext?.GetRequestedApiVersion().ToString() ?? "1.0";
+        
         return CreatedAtAction(
             nameof(GetById),
-            new { id = customer.Id },
+            new { version = apiVersion, id = customer.Id },
             customer);
     }
     
+    /// <summary>
+    /// Gets a customer by id.
+    /// </summary>
+    /// <param name="id">Customer id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The customer if found.</returns>
+    /// <response code="200">Customer found.</response>
+    /// <response code="404">Customer does not exist.</response>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(CustomerDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -57,11 +84,28 @@ public class CustomersController : ControllerBase
         return Ok(customer);
     }
     
+    /// <summary>
+    /// Lists customers with pagination.
+    /// </summary>
+    /// <remarks>
+    /// Rate limited by client IP (policy <c>fixed-by-ip</c>).
+    /// Page size is capped by <c>Pagination:MaxPageSize</c> (default 100).
+    /// </remarks>
+    /// <param name="page">Page number (1-based).</param>
+    /// <param name="pageSize">Items per page.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Paged list of customers.</returns>
+    /// <response code="200">Page returned successfully.</response>
+    /// <response code="400">Invalid page or pageSize.</response>
+    /// <response code="429">Too many requests from this IP.</response>
+    [EnableRateLimiting("fixed-by-ip")]
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<CustomerDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<PagedResult<CustomerDto>>> GetAll(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
         CancellationToken cancellationToken = default)
     {
         var customers = await _sender.Send(
@@ -71,9 +115,22 @@ public class CustomersController : ControllerBase
         return Ok(customers);
     }
     
+    /// <summary>
+    /// Updates an existing customer's name and email.
+    /// </summary>
+    /// <param name="id">Customer id.</param>
+    /// <param name="request">New name and email.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated customer.</returns>
+    /// <response code="200">Customer updated.</response>
+    /// <response code="400">Validation failed.</response>
+    /// <response code="404">Customer does not exist.</response>
+    /// <response code="409">Email already used by another customer.</response>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(CustomerDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<CustomerDto>> Update(
         Guid id,
         [FromBody] UpdateCustomerRequest request,
@@ -91,8 +148,17 @@ public class CustomersController : ControllerBase
         return Ok(customer);
     }
     
+    /// <summary>
+    /// Deactivates a customer (soft disable).
+    /// </summary>
+    /// <param name="id">Customer id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <response code="204">Customer deactivated.</response>
+    /// <response code="400">Customer is already inactive.</response>
+    /// <response code="404">Customer does not exist.</response>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken)
     {
@@ -100,8 +166,17 @@ public class CustomersController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Reactivates a previously deactivated customer.
+    /// </summary>
+    /// <param name="id">Customer id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <response code="204">Customer reactivated.</response>
+    /// <response code="400">Customer is already active.</response>
+    /// <response code="404">Customer does not exist.</response>
     [HttpPost("{id:guid}/reactivate")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Reactivate(Guid id, CancellationToken cancellationToken)
     {

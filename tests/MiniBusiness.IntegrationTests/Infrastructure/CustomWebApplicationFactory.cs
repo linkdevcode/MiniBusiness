@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MiniBusiness.Application.Common.Options;
 using Npgsql;
 using Respawn;
 using Testcontainers.PostgreSql;
-using Xunit;
-using MiniBusiness.Infrastructure.Persistence; // Trỏ đúng AppDbContext của bạn
+using MiniBusiness.Infrastructure.Persistence;
 
 namespace MiniBusiness.IntegrationTests.Infrastructure;
 
@@ -19,7 +19,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         .WithDatabase("test_db")
         .WithUsername("postgres")
         .WithPassword("postgres")
-        .WithWaitStrategy(Wait.ForUnixContainer().UntilExternalTcpPortIsAvailable(5432))
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready -U postgres -d test_db"))
         .Build();
 
     private DbConnection _dbConnection = null!;
@@ -33,9 +33,21 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        
+        builder.UseSetting(
+            "ConnectionStrings:DefaultConnection",
+            GetTestConnectionString());
 
         builder.ConfigureServices(services =>
         {
+            services.Configure<PaginationOptions>(options =>
+            {
+                options.MinPage = 1;
+                options.DefaultPageSize = 10;
+                options.MinPageSize = 1;
+                options.MaxPageSize = 100;
+            });
+            
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
 
@@ -47,7 +59,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             // Lấy ConnectionString từ Container đã được Start
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseNpgsql(_postgres.GetConnectionString());
+                options.UseNpgsql(GetTestConnectionString());
             });
         });
     }
@@ -65,7 +77,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         }
 
         // 3. Khởi tạo Respawner
-        _dbConnection = new NpgsqlConnection(_postgres.GetConnectionString());
+        _dbConnection = new NpgsqlConnection(GetTestConnectionString());
         await _dbConnection.OpenAsync();
 
         _respawner = await Respawner.CreateAsync(_dbConnection, new RespawnerOptions
@@ -89,4 +101,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         await _postgres.DisposeAsync();
         await base.DisposeAsync();
     }
+
+    private string GetTestConnectionString() => _postgres.GetConnectionString() + ";SSL Mode=Disable";
 }

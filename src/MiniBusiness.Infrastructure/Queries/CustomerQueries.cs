@@ -43,6 +43,8 @@ public sealed class CustomerQueries : ICustomerQueries
         var totalCount = await query.CountAsync(
             cancellationToken);
 
+        var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
         var items = await query
             .OrderBy(x => x.Name)
             .Skip((page - 1) * pageSize)
@@ -60,6 +62,7 @@ public sealed class CustomerQueries : ICustomerQueries
             items,
             page,
             pageSize,
-            totalCount);
+            totalCount,
+            totalPages);
     }
 }

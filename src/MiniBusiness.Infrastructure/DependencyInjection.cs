@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MiniBusiness.Application.Common.Interfaces;
 using MiniBusiness.Infrastructure.Persistence;
 using MiniBusiness.Infrastructure.Queries;
@@ -18,6 +19,13 @@ public static class DependencyInjection
         {
             options.UseNpgsql(connectionString);
         });
+
+        services.AddHealthChecks()
+            .AddNpgSql(
+                connectionString!,
+                name: "postgres",
+                failureStatus: HealthStatus.Unhealthy,
+                tags: ["ready"]);
 
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<ICustomerQueries, CustomerQueries>();
