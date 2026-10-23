@@ -91,7 +91,11 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions()
     Predicate = check => check.Tags.Contains("ready")
 });
 
-app.UseRateLimiter();
+// Integration tests use Environment=Testing and skip rate limiting to avoid flaky 429s.
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseRateLimiter();
+}
 
 app.MapControllers();
 

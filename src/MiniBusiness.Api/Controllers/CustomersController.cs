@@ -50,9 +50,10 @@ public class CustomersController : ControllerBase
         var customer = await _sender.Send(
             command,
             cancellationToken);
-        
-        var apiVersion = HttpContext?.GetRequestedApiVersion().ToString() ?? "1.0";
-        
+
+        // Match route group format 'v'VVV → /api/v1/... (not v1.0)
+        var apiVersion = HttpContext.RequestedApiVersion?.ToString("VVV") ?? "1";
+
         return CreatedAtAction(
             nameof(GetById),
             new { version = apiVersion, id = customer.Id },
@@ -104,8 +105,8 @@ public class CustomersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<PagedResult<CustomerDto>>> GetAll(
-        [FromQuery] int page,
-        [FromQuery] int pageSize,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
         CancellationToken cancellationToken = default)
     {
         var customers = await _sender.Send(

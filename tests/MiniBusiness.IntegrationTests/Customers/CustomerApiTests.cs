@@ -48,6 +48,10 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         created!.Email.Should().Be(email);
         created.Name.Should().Be(name);
         created.CreatedAt.Should().NotBe(default);
+
+        createResponse.Headers.Location.Should().NotBeNull();
+        createResponse.Headers.Location!.ToString()
+            .Should().Contain($"/api/v1/customers/{created.Id}");
         created.UpdatedAt.Should().NotBe(default);
         (created.UpdatedAt - created.CreatedAt).Duration().Should().BeLessThan(TimeSpan.FromSeconds(1));
 
@@ -118,6 +122,26 @@ public class CustomerApiTests(CustomWebApplicationFactory factory) : IAsyncLifet
         
         // Assert
         getResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task NG_GetAll_WithInvalidPage_Returns400()
+    {
+        var response = await _client.GetAsync("/api/v1/customers?page=0&pageSize=10");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task OK_GetAll_WhenPageParamsOmitted_UsesDefaults()
+    {
+        var response = await _client.GetAsync("/api/v1/customers");
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<CustomerDto>>(JsonOptions);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        result.Should().NotBeNull();
+        result!.Page.Should().Be(1);
+        result.PageSize.Should().Be(10);
     }
 
     [Fact]

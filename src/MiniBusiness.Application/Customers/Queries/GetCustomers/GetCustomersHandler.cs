@@ -20,8 +20,9 @@ public sealed class GetCustomersHandler : IRequestHandler<GetCustomersQuery, Pag
 
     public Task<PagedResult<CustomerDto>> Handle(GetCustomersQuery request, CancellationToken cancellationToken)
     {
-        var page = request.Page <= 0 ? _paginationOptions.Value.MinPage : request.Page;
-        var pageSize = request.PageSize <= 0 ? _paginationOptions.Value.DefaultPageSize : request.PageSize;
+        var options = _paginationOptions.Value;
+        var page = request.Page ?? options.MinPage;
+        var pageSize = request.PageSize ?? options.DefaultPageSize;
 
         return _queries.GetAllAsync(page, pageSize, cancellationToken);
     }

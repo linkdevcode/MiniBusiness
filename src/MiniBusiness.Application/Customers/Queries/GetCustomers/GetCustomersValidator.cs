@@ -11,18 +11,15 @@ public sealed class GetCustomersValidator : AbstractValidator<GetCustomersQuery>
         var minPage = paginationOptions.Value.MinPage;
         var minPageSize = paginationOptions.Value.MinPageSize;
         var maxPageSize = paginationOptions.Value.MaxPageSize;
-        
+
         RuleFor(x => x.Page)
             .GreaterThanOrEqualTo(minPage)
-            .When(x => x.Page >= minPage)
+            .When(x => x.Page.HasValue)
             .WithMessage($"Page must be greater than or equal to {minPage}.");
 
         RuleFor(x => x.PageSize)
-            .GreaterThanOrEqualTo(minPageSize)
-            .When(x => x.PageSize >= minPageSize)
-            .WithMessage($"Page size must be greater than or equal to {minPageSize}.")
-            .LessThanOrEqualTo(maxPageSize)
-            .When(x => x.PageSize <= maxPageSize)
-            .WithMessage($"Page size must not exceed {maxPageSize}");
+            .InclusiveBetween(minPageSize, maxPageSize)
+            .When(x => x.PageSize.HasValue)
+            .WithMessage($"Page size must be between {minPageSize} and {maxPageSize}.");
     }
 }

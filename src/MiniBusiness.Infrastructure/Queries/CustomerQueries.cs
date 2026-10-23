@@ -37,13 +37,16 @@ public sealed class CustomerQueries : ICustomerQueries
         int pageSize,
         CancellationToken cancellationToken)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0);
+
         var query = _dbContext.Customers
             .AsNoTracking();
 
         var totalCount = await query.CountAsync(
             cancellationToken);
 
-        var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
         var items = await query
             .OrderBy(x => x.Name)

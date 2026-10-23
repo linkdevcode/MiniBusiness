@@ -4,18 +4,18 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MiniBusiness.Application.Common.Options;
+using MiniBusiness.Infrastructure.Persistence;
 using Npgsql;
 using Respawn;
 using Testcontainers.PostgreSql;
-using MiniBusiness.Infrastructure.Persistence;
 
 namespace MiniBusiness.IntegrationTests.Infrastructure;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("test_db")
         .WithUsername("postgres")
         .WithPassword("postgres")
@@ -25,18 +25,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     private DbConnection _dbConnection = null!;
     private Respawner _respawner = null!;
 
-    public CustomWebApplicationFactory()
-    {
-        
-    }
-
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
-        
-        builder.UseSetting(
-            "ConnectionStrings:DefaultConnection",
-            GetTestConnectionString());
+        builder.UseEnvironment("Testing");
 
         builder.ConfigureServices(services =>
         {
@@ -47,36 +38,50 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 options.MinPageSize = 1;
                 options.MaxPageSize = 100;
             });
-            
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
 
-            if (descriptor != null)
+            // WebApplicationFactory + minimal hosting: config override is unreliable —
+            // replace DbContext and health check so both use the Testcontainers CS.
+            var dbContextDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+            if (dbContextDescriptor is not null)
             {
-                services.Remove(descriptor);
+                services.Remove(dbContextDescriptor);
             }
 
-            // Lấy ConnectionString từ Container đã được Start
             services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseNpgsql(GetTestConnectionString());
             });
+
+            services.Configure<HealthCheckServiceOptions>(options =>
+            {
+                foreach (var registration in options.Registrations
+                             .Where(r => r.Name == "postgres")
+                             .ToList())
+                {
+                    options.Registrations.Remove(registration);
+                }
+            });
+
+            services.AddHealthChecks()
+                .AddNpgSql(
+                    GetTestConnectionString(),
+                    name: "postgres",
+                    failureStatus: HealthStatus.Unhealthy,
+                    tags: ["ready"]);
         });
     }
 
     public async Task InitializeAsync()
     {
-        // 1. Start Postgres Container
         await _postgres.StartAsync();
 
-        // 2. Chạy Migration 1 lần duy nhất cho toàn bộ Test Suite
         using (var scope = Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await db.Database.MigrateAsync();
         }
 
-        // 3. Khởi tạo Respawner
         _dbConnection = new NpgsqlConnection(GetTestConnectionString());
         await _dbConnection.OpenAsync();
 
@@ -102,5 +107,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         await base.DisposeAsync();
     }
 
-    private string GetTestConnectionString() => _postgres.GetConnectionString() + ";SSL Mode=Disable";
+    private string GetTestConnectionString() =>
+        _postgres.GetConnectionString() + ";SSL Mode=Disable";
 }
